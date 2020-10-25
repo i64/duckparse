@@ -1,0 +1,20 @@
+repos:
+  - repo: https://github.com/ambv/black
+    rev: stable
+    hooks:
+    - id: black
+      language_version: python3.8
+      entry: bash -c 'black "$@"; git add -u' --
+
+  # - repo: local
+  #   hooks:
+  #   - id: pytest
+  #     name: pytest
+  #     entry: pipenv run pytest
+  #     language: system
+  #     pass_filenames: false
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: f687d36b12cd72d417bba07599ff27e734161768
+    hooks:
+    - id: mypy
