@@ -22,5 +22,5 @@ def test_read_hybrid():
     assert 2 == data._Reader__current_byte
 
     assert b"\xea" == data.read_bytes(1)
-    assert 2 == data._Reader__bit_needle
+    assert 8 == data._Reader__bit_needle
     assert 3 == data._Reader__current_byte
