@@ -25,7 +25,7 @@ Example:
 ExampleFormat(width=3, height=2, some_bitfield=1)
 ```
 
-Or you can define a new data type or a enum
+Or you can define a new data type or an enum
 
 ```python
 from duckparse import datakind, enumkind
