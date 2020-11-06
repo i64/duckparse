@@ -2,7 +2,7 @@ from abc import ABCMeta
 from dataclasses import dataclass
 
 from .reader import Reader
-from .kindprotocol import Kind
+from .kindprotocol import Kind, VarKind
 
 from .consts import (
     StreamType,
@@ -158,6 +158,7 @@ def _process_class(cls, is_section: bool = False):
                 value=Call(function_name=f"self.{prefunction.__name__}",)
             )
         )
+
     for field_name, kind in zip(
         cls_annotations.keys(), _normalize_kind(cls_annotations.values()),
     ):
@@ -217,6 +218,7 @@ def get_call(
         function_name = f"__duckparse_function_{kind.instance.__name__}__"
         cls_locals[function_name] = kind.instance
         return Call(function_name=function_name,)
+
     else:
         if kind.params:
             params_as_list: List[str] = list()
@@ -229,6 +231,7 @@ def get_call(
                         bool,
                         bytes,
                         bytearray,
+                        VarKind,
                         type(Ellipsis),
                         type(None),
                     ),

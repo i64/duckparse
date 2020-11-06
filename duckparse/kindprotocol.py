@@ -13,6 +13,14 @@ class Kind:
     params: Optional[Tuple]
 
 
+@dataclass
+class VarKind:
+    var_name: str
+
+    def __repr__(self):
+        return f"self.{self.var_name}"
+
+
 def _datakind__getitem__(cls, params):
     if not isinstance(params, tuple):
         params = (params,)

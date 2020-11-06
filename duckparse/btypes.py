@@ -110,7 +110,3 @@ class Contents:
             raise ValidationError(expected, found)
 
         return expected
-
-
-class DuckEnum:
-    ...

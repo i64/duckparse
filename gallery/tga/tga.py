@@ -2,8 +2,8 @@ import pathlib
 
 from os import SEEK_END
 
-from duckparse.btypes import U8, U16, U32, Contents
-from duckparse import stream, section, datakind, enumkind
+from duckparse.btypes import Byte, U8, U16, U32, Contents
+from duckparse import VarKind, stream, section, datakind, enumkind
 
 from duckparse.reader import Reader
 
@@ -25,31 +25,11 @@ class ImageTypeEnum:
     RLE_BW = 11
 
 
-@datakind
-class ImageId(U8):
-    __reprocess_after__ = "img_descriptor"
-    __reprocessor_name__ = "image_id"
-
-    def __reprocessor__(self, reader: Reader, params):
-        image_id_len = params[0].image_id_len
-        return list(reader.read_bytes(image_id_len))
-
-
-@datakind
-class VersionMagic(Contents):
-    __reprocess_after__ = "version_magic"
-    __reprocessor_name__ = "is_valid"
-
-    def __reprocessor__(self, reader: Reader, params):
-        version_magic = params[0].version_magic
-        return version_magic is not None
-
-
 @section
 class Footer:
     ext_area_ofs: U32
     dev_dir_ofs: U32
-    version_magic: VersionMagic[
+    version_magic: Contents[
         b"\x54\x52\x55\x45\x56\x49\x53\x49\x4f\x4e\x2d\x58\x46\x49\x4c\x45\x2e\x00"
     ]
 
@@ -65,7 +45,7 @@ class TGA:
     8-bit RGB channels + 8-bit alpha channel), color mapping an
     """
 
-    image_id_len: ImageId
+    image_id_len: U8
     color_map_type: ColorMapEnum[U8]
     image_type: ImageTypeEnum[U8]
     color_map_ofs: U16
@@ -77,6 +57,7 @@ class TGA:
     height: U16
     image_depth: U8
     img_descriptor: U8
+    image_id: Byte[VarKind("image_id_len")]
     footer: Footer
 
 
