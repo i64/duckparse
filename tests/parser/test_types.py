@@ -3,6 +3,7 @@ from io import BytesIO
 from duckparse import stream_parser
 from duckparse.btypes import U8, U16, U32, U64, Bits
 
+
 @stream_parser
 class TestClass:
     uu8: U8
@@ -25,5 +26,3 @@ def test_unsigned():
     assert DATA.uu32 == 0xE9DEF2CE
     assert DATA.bb1 == 0x00
     assert DATA.uu64 == 0xF219637F2E7CD75F
-
-

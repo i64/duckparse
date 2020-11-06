@@ -37,13 +37,16 @@ class Reader:
         input_term: Optional[bytearray] = None,
         allign: bool = True,
     ) -> bytearray:
-        content = bytearray(self.io.read(size))
-        self.__last_byte = content[-1]
-        if allign:
-            self.__bit_needle = 8
-            self.__remaining_bits = 0
-        if __debug__:
-            self.__current_byte += size
+        if size:
+            content = bytearray(self.io.read(size))
+            self.__last_byte = content[-1]
+            if allign:
+                self.__bit_needle = 8
+                self.__remaining_bits = 0
+            if __debug__:
+                self.__current_byte += size
+        else:
+            content = bytearray()
         return content
 
     def read_bits_int_le(self, size) -> int:
