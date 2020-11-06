@@ -98,7 +98,8 @@ def _make_repr(cls_name: str, assigments: List[Assignment], cls_locals):
     arguments = ", ".join(
         f"{assigment.assing_to}={{self.{assigment.assing_to}!r}}"
         for assigment in assigments
-        if hasattr(assigment, "assing_to") and assigment.assing_to is not None
+        if hasattr(assigment, "assing_to")
+        and assigment.assing_to is not None
     )
     function_body = [f"return f'{cls_name}({arguments})'"]
     function = _create_fn(
@@ -153,7 +154,9 @@ def _process_class(cls, is_section: bool = False):
         prefunction = getattr(cls, PREFUNCTION_FIELD)
         cls_locals[prefunction.__name__] = prefunction
         init_body.append(
-            Assignment(value=Call(function_name=f"self.{prefunction.__name__}",))
+            Assignment(
+                value=Call(function_name=f"self.{prefunction.__name__}",)
+            )
         )
     for field_name, kind in zip(
         cls_annotations.keys(), _normalize_kind(cls_annotations.values()),
