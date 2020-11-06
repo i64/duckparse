@@ -1,10 +1,10 @@
 from io import BytesIO
 
-from duckparse import stream_parser
+from duckparse import stream
 from duckparse.btypes import U8, U16, U32, U64, Bits
 
 
-@stream_parser
+@stream
 class TestClass:
     uu8: U8
     bb2: Bits[2]

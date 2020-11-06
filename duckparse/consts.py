@@ -1,9 +1,21 @@
+from enum import Enum
+
 READER_NAME = "self.reader"
 
-PROCESSOR_NAME = "__processor__"
+PROCESSOR_FUNCTION_FIELD = "__processor__"
 
-REPROCESS_AFTER = "__reprocess_after__"
-REPROCESSOR_NAME = "__reprocessor__"
-REPROCESS_ASSIGN_TO = "__reprocessor_name__"
 
-DATAKIND_GUARD_NAME = "__duckparse_kindguard__"
+REPROCESS_AFTER_FIELD = "__reprocess_after__"
+REPROCESSOR_FUNCTION_FIELD = "__reprocessor__"
+REPROCESS_ASSIGN_TO_FIELD = "__reprocessor_name__"
+
+PREFUNCTION_FIELD = "__duckparse_first__"
+STREAM_TYPE_FIELD = "__duckparse_stream_type__"
+DATAKIND_GUARD_FIELD = "__duckparse_kindguard__"
+
+ENUM_FIELD = "__masked_enum__"
+
+
+class StreamType(Enum):
+    STREAM = 0
+    SECTION = 1

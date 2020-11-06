@@ -4,7 +4,7 @@ from enum import Enum
 from dataclasses import dataclass
 from typing import Optional, Tuple, Any
 
-from .consts import DATAKIND_GUARD_NAME, PROCESSOR_NAME
+from .consts import DATAKIND_GUARD_FIELD, PROCESSOR_FUNCTION_FIELD
 
 
 @dataclass
@@ -22,7 +22,7 @@ def _datakind__getitem__(cls, params):
 def datakind(cls):
     def wrap(cls):
         cls.__class_getitem__ = classmethod(_datakind__getitem__)
-        setattr(cls, DATAKIND_GUARD_NAME, True)
+        setattr(cls, DATAKIND_GUARD_FIELD, True)
         return cls
 
     if cls is None:
@@ -41,7 +41,8 @@ def __enum__preprocessor__(
 def enumkind(cls):
     def wrap(cls):
         cls.__masked_enum__ = Enum(cls.__name__, cls.__dict__)
-        setattr(cls, PROCESSOR_NAME, __enum__preprocessor__)
+        cls.__masked_enum__.__repr__ = cls.__masked_enum__.__str__
+        setattr(cls, PROCESSOR_FUNCTION_FIELD, __enum__preprocessor__)
         return datakind(cls)
 
     if cls is None:
