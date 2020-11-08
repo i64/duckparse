@@ -2,8 +2,8 @@ import pathlib
 
 from os import SEEK_END
 
-from duckparse.btypes import Byte, U8, U16, U32, Contents
-from duckparse import VarKind, stream, section, datakind, enumkind
+from duckparse.btypes import Byte, U8, U16, U32, Var, Contents
+from duckparse import stream, section, enumkind
 
 from duckparse.reader import Reader
 
@@ -57,7 +57,7 @@ class TGA:
     height: U16
     image_depth: U8
     img_descriptor: U8
-    image_id: Byte[VarKind("image_id_len")]
+    image_id: Byte[Var("image_id_len")]
     footer: Footer
 
 

@@ -1,8 +1,11 @@
 from abc import ABCMeta
 from dataclasses import dataclass
 
+from .utils import generic_repeat, resolve
+
 from .reader import Reader
-from .kindprotocol import Kind, VarKind
+from .kindprotocol import Kind, KindProtocol
+from .misckinds import VarKind, RepeatKind
 
 from .consts import (
     StreamType,
@@ -37,9 +40,12 @@ __all__ = [
 class Call:
     function_name: str
     params: str = ""
+    reader_as_param: bool = True
 
     def __repr__(self):
-        return f"{self.function_name}({READER_NAME}, {self.params})"
+        if self.reader_as_param:
+            return f"{self.function_name}({READER_NAME}, {self.params})"
+        return f"{self.function_name}({self.params})"
 
 
 @dataclass
@@ -52,6 +58,43 @@ class Assignment:
             return f"self.{self.assing_to} = {self.value!r}"
         else:
             return repr(self.value)
+
+
+def _getcall_kindprotocol(
+    item: KindProtocol,
+    par_counter: List[int],
+    cls_locals: Dict[str, Any],
+    reprocessors_dict: Dict[str, List[Tuple[str, Assignment]]],
+):
+    if hasattr(item, DATAKIND_GUARD_FIELD) and not isinstance(item, Kind):
+        item = Kind(instance=item(), params=None,)
+    elif (
+        hasattr(item, STREAM_TYPE_FIELD)
+        and getattr(item, STREAM_TYPE_FIELD) is StreamType.SECTION
+    ):
+        item = Kind(instance=item, params=None,)
+
+    result = get_call(
+        kind=item,
+        par_counter=par_counter,
+        cls_locals=cls_locals,
+        reprocessors_dict=reprocessors_dict,
+    )
+    par_counter[0] += 1
+
+    return result
+
+
+def _getcall_add_param(
+    field_name: str,
+    item: KindProtocol,
+    par_counter: List[int],
+    cls_locals: Dict[str, Any],
+):
+    param_name = f"__{field_name}_par{par_counter[0]}__"
+    cls_locals[param_name] = item
+    par_counter[0] += 1
+    return param_name
 
 
 def _create_fn(name, args, body, *, globals=None, locals=None):
@@ -152,10 +195,10 @@ def _process_class(cls, is_section: bool = False):
 
     if hasattr(cls, PREFUNCTION_FIELD):
         prefunction = getattr(cls, PREFUNCTION_FIELD)
-        cls_locals[prefunction.__name__] = prefunction
+        cls_locals[resolve(prefunction)] = prefunction
         init_body.append(
             Assignment(
-                value=Call(function_name=f"self.{prefunction.__name__}",)
+                value=Call(function_name=f"self.{resolve(prefunction)}",)
             )
         )
 
@@ -168,106 +211,127 @@ def _process_class(cls, is_section: bool = False):
             reprocessors_dict=reprocessors_dict,
         )
         init_body.append(Assignment(assing_to=field_name, value=call))
+
         if reprocessor := reprocessors_dict.get(field_name):
             init_body.extend(reprocessor)
 
     cls.__init__ = _make_init(init_body, cls_locals, is_section)
-    cls.__repr__ = _make_repr(cls.__name__, init_body, cls_locals)
+    cls.__repr__ = _make_repr(resolve(cls), init_body, cls_locals)
     return cls
 
 
-#         ...
 def get_call(
     kind: Kind,
     cls_locals: Dict[str, Any],
     par_counter: Optional[List[int]] = None,
     reprocessors_dict: Optional[Dict[str, Assignment]] = None,
 ) -> Call:
-
+    # TODO: Do not add the function if it's processed in the past
     if not hasattr(kind, PROCESSOR_FUNCTION_FIELD):
         # TODO: raise error: missing field
         ...
+
     params = ""
     par_counter = par_counter or [0]
+    if kind.kind_locals is not None:
+        cls_locals.update(kind.kind_locals)
+    if kind.instance:
+        field_name = resolve(kind.instance)
 
-    field_name = kind.instance.__class__.__name__
-
-    if hasattr(kind.instance, REPROCESS_AFTER_FIELD) and hasattr(
-        kind.instance, REPROCESS_ASSIGN_TO_FIELD
-    ):
-        function_name = f"__duckparse_function_{getattr(kind.instance, REPROCESS_AFTER_FIELD)}_{par_counter[0]}__"
-        reprocessors_dict.setdefault(
-            getattr(kind.instance, REPROCESS_AFTER_FIELD), []
-        ).append(
-            Assignment(
-                value=Call(function_name=function_name, params="(self,)"),
-                assing_to=getattr(
-                    kind.instance, REPROCESS_ASSIGN_TO_FIELD
-                ),
+        if hasattr(kind.instance, REPROCESS_AFTER_FIELD) and hasattr(
+            kind.instance, REPROCESS_ASSIGN_TO_FIELD
+        ):
+            function_name = f"__duckparse_function_{getattr(kind.instance, REPROCESS_AFTER_FIELD)}_{par_counter[0]}__"
+            reprocessors_dict.setdefault(
+                getattr(kind.instance, REPROCESS_AFTER_FIELD), []
+            ).append(
+                Assignment(
+                    value=Call(
+                        function_name=function_name, params="(self,)"
+                    ),
+                    assing_to=getattr(
+                        kind.instance, REPROCESS_ASSIGN_TO_FIELD
+                    ),
+                )
             )
+            cls_locals[function_name] = getattr(
+                kind.instance, REPROCESSOR_FUNCTION_FIELD
+            )
+            par_counter[0] += 1
+
+        if (
+            hasattr(kind.instance, STREAM_TYPE_FIELD)
+            and getattr(kind.instance, STREAM_TYPE_FIELD)
+            is StreamType.SECTION
+        ):
+            function_name = (
+                f"__duckparse_function_{resolve(kind.instance)}__"
+            )
+            cls_locals[function_name] = kind.instance
+            return Call(function_name=function_name,)
+        else:
+            if kind.params:
+                params_as_list: List[str] = list()
+                for item in kind.params:
+                    if isinstance(
+                        item,
+                        (
+                            int,
+                            str,
+                            bool,
+                            bytes,
+                            bytearray,
+                            VarKind,
+                            type(Ellipsis),
+                            type(None),
+                        ),
+                    ):
+                        params_as_list.append(item)
+                    elif isinstance(item, Kind) or hasattr(
+                        item, DATAKIND_GUARD_FIELD
+                    ):
+                        params_as_list.append(
+                            _getcall_kindprotocol(
+                                item,
+                                par_counter,
+                                cls_locals,
+                                reprocessors_dict,
+                            )
+                        )
+                    else:
+                        params_as_list.append(
+                            _getcall_add_param(
+                                field_name, item, par_counter, cls_locals
+                            )
+                        )
+
+                params = f'({", ".join(map(repr, params_as_list))},)'
+
+        function_name = (
+            f"__duckparse_function_{field_name}_{par_counter[0]}__"
         )
         cls_locals[function_name] = getattr(
-            kind.instance, REPROCESSOR_FUNCTION_FIELD
+            kind.instance, PROCESSOR_FUNCTION_FIELD
         )
-        par_counter[0] += 1
-    if (
-        hasattr(kind.instance, STREAM_TYPE_FIELD)
-        and getattr(kind.instance, STREAM_TYPE_FIELD)
-        is StreamType.SECTION
-    ):
-        function_name = f"__duckparse_function_{kind.instance.__name__}__"
-        cls_locals[function_name] = kind.instance
-        return Call(function_name=function_name,)
-
+        return Call(function_name=function_name, params=params,)
     else:
-        if kind.params:
-            params_as_list: List[str] = list()
-            for item in kind.params:
-                if isinstance(
-                    item,
-                    (
-                        int,
-                        str,
-                        bool,
-                        bytes,
-                        bytearray,
-                        VarKind,
-                        type(Ellipsis),
-                        type(None),
-                    ),
-                ):
-                    params_as_list.append(item)
-                elif isinstance(item, Kind) or hasattr(
-                    item, DATAKIND_GUARD_FIELD
-                ):
-                    if hasattr(
-                        item, DATAKIND_GUARD_FIELD
-                    ) and not isinstance(item, Kind):
-                        item = Kind(instance=item(), params=None,)
+        if isinstance(kind, RepeatKind):
+            assert len(kind.params) == 2
 
-                    params_as_list.append(
-                        get_call(
-                            kind=item,
-                            par_counter=par_counter,
-                            cls_locals=cls_locals,
-                            reprocessors_dict=reprocessors_dict,
-                        )
-                    )
-                    par_counter[0] += 1
-                else:
-                    param_name = f"__{field_name}_par{par_counter[0]}__"
-                    cls_locals[param_name] = item
-                    params_as_list.append(param_name)
-                    par_counter[0] += 1
-            params = f'({", ".join(map(repr, params_as_list))},)'
+            bodykind, condition = kind.params
 
-    function_name = (
-        f"__duckparse_function_{field_name}_{par_counter[0]}__"
-    )
-    cls_locals[function_name] = getattr(
-        kind.instance, PROCESSOR_FUNCTION_FIELD
-    )
-    return Call(function_name=function_name, params=params,)
+            function_name = "__duckparse_generic_repeat__"
+            cls_locals[function_name] = generic_repeat
+
+            new_body = _getcall_kindprotocol(
+                bodykind, par_counter, cls_locals, reprocessors_dict
+            )
+
+            return Call(
+                function_name=function_name,
+                params=f"lambda: {new_body!r}, {condition}",
+                reader_as_param=False,
+            )
 
 
 def stream(cls):

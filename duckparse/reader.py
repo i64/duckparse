@@ -1,7 +1,10 @@
 import sys
+from os import SEEK_END, SEEK_SET
+
 from .c_types import BigEndian, LittleEndian, _Ctypes
 
 from dataclasses import dataclass, field
+
 from typing import (
     BinaryIO,
     List,
@@ -16,6 +19,7 @@ from typing import (
 class Reader:
     io: BinaryIO
 
+    size: int = 0
     endianness: str = sys.byteorder
     primitive: _Ctypes = LittleEndian
     # we have to save the last byte for bit operations
@@ -24,12 +28,20 @@ class Reader:
     __bit_needle: int = 8
     # and this is our inverse bit counter
     __remaining_bits: int = 0
+
     if __debug__:
         __current_byte: int = -1
 
     def __post_init__(self):
+        self.__set_size()
         if self.endianness == "big":
             self.primitive = BigEndian
+
+    def __set_size(self):
+        cur = self.io.tell()
+        self.io.seek(0, SEEK_END)
+        self.size = self.io.tell()
+        self.io.seek(cur, SEEK_SET)
 
     def read_bytes(
         self,

@@ -1,6 +1,8 @@
-# from . import c_types
-from .kindprotocol import datakind
 from .reader import Reader
+from .kindprotocol import datakind
+
+from .misckinds import RepeatN, RepeatEOS
+from .misckinds import VarKind as Var
 
 from typing import Any, Tuple, Union, Dict, List, Callable, Optional
 
