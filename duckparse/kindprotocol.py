@@ -1,35 +1,50 @@
-from .reader import Reader
-
 from dataclasses import dataclass
-from typing import Optional, Tuple, Any, Dict
 
-from .consts import DATAKIND_GUARD_FIELD
+from .consts import READER_NAME
 
-
-class KindProtocol:
-    __duckparse_kindguard__: bool
+from typing import (
+    Optional,
+    Any,
+    Dict,
+    Protocol,
+    List,
+    Tuple,
+    runtime_checkable,
+)
 
 
 @dataclass
-class Kind:
-    instance: KindProtocol
-    params: Optional[Tuple]
+class Call:
+    function_name: str
+    params: str = ""
+    reader_as_param: bool = True
+
+    def __repr__(self) -> str:
+        if self.reader_as_param:
+            return f"{self.function_name}({READER_NAME}, {self.params})"
+        return f"{self.function_name}({self.params})"
+
+
+@dataclass
+class Assignment:
+    value: Call
+    assing_to: Optional[str] = None
+
+    def __repr__(self) -> str:
+        if self.assing_to is not None:
+            return f"self.{self.assing_to} = {self.value!r}"
+        else:
+            return repr(self.value)
+
+
+@runtime_checkable
+class Kind(Protocol):
     kind_locals: Optional[Dict[str, Any]] = None
 
-
-def _datakind__getitem__(cls, params):
-    if not isinstance(params, tuple):
-        params = (params,)
-    return Kind(instance=cls(), params=params)
-
-
-def datakind(cls):
-    def wrap(cls):
-        cls.__class_getitem__ = classmethod(_datakind__getitem__)
-        setattr(cls, DATAKIND_GUARD_FIELD, True)
-        return cls
-
-    if cls is None:
-        return wrap
-
-    return wrap(cls)
+    def into_call(
+        self,
+        cls_locals: Dict[str, Any],
+        par_counter: Optional[List[int]] = None,
+        reprocessors_dict: Optional[Dict[str, List[Assignment]]] = None,
+    ) -> Call:
+        ...

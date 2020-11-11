@@ -1,4 +1,2 @@
-from .misckinds import enumkind
-
-from .kindprotocol import datakind
+from .kinds import datakind, enumkind
 from .duckparse import stream, section

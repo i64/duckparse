@@ -15,6 +15,8 @@ from duckparse.btypes import (
 from duckparse.reader import Reader
 from duckparse import stream, section, datakind, enumkind
 
+from typing import Tuple, Union
+
 
 @enumkind
 class Compression:
@@ -98,7 +100,11 @@ class EndOfCentralDir:
 
 @datakind
 class SectionBody:
-    def __processor__(self, reader: Reader, params):
+    def __processor__(
+        self, reader: Reader, params: Tuple[int]
+    ) -> Union[
+        CentralDirEntry, LocalFile, EndOfCentralDir, DataDescriptor
+    ]:
         (section_type,) = params
         if section_type == 0x0201:
             return CentralDirEntry(reader)
@@ -125,5 +131,5 @@ class Zip:
 if __name__ == "__main__":
     with open(
         f"{pathlib.Path(__file__).parent.absolute()}/sample1.zip", "rb"
-    ) as zip_sample:
-        print(Zip(zip_sample))
+    ) as zip_io:
+        print(Zip(zip_io))

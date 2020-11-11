@@ -3,15 +3,12 @@ from os import SEEK_END, SEEK_SET
 
 from .c_types import BigEndian, LittleEndian, _Ctypes
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from typing import (
     BinaryIO,
-    List,
     Optional,
     Tuple,
-    Union,
-    TYPE_CHECKING,
 )
 
 

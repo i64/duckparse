@@ -64,5 +64,5 @@ class TGA:
 if __name__ == "__main__":
     with open(
         f"{pathlib.Path(__file__).parent.absolute()}/earth.tga", "rb"
-    ) as tga_sample:
-        print(TGA(tga_sample))
+    ) as tga_io:
+        print(TGA(tga_io))

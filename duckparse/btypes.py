@@ -1,8 +1,6 @@
 from .reader import Reader
-from .kindprotocol import datakind
-
-from .misckinds import RepeatN, RepeatEOS
-from .misckinds import VarKind as Var
+from .kinds import datakind, RepeatN, RepeatEOS
+from .kinds import VarKind as Var
 
 from typing import Any, Tuple, Union, Dict, List, Callable, Optional
 
@@ -20,64 +18,74 @@ class Byte:
 
 @datakind
 class Bits:
-    def __processor__(
-        self, reader: Reader, params: Tuple[int]
-    ) -> bytearray:
+    def __processor__(self, reader: Reader, params: Tuple[int]) -> int:
         (size,) = params
         return reader.read_bits_int_le(size)
 
 
 @datakind
 class U8:
-    def __processor__(self, reader: Reader) -> bytearray:
+    def __processor__(self, reader: Reader) -> int:
         return reader.primitive.u8.unpack(reader.read_bytes(1))[0]
 
 
 @datakind
 class I8:
-    def __processor__(self, reader: Reader) -> bytearray:
+    def __processor__(self, reader: Reader) -> int:
         return reader.primitive.i8.unpack(reader.read_bytes(1))[0]
 
 
 @datakind
 class U16:
-    def __processor__(self, reader: Reader) -> bytearray:
+    def __processor__(self, reader: Reader) -> int:
         return reader.primitive.u16.unpack(reader.read_bytes(2))[0]
 
 
 @datakind
 class I16:
-    def __processor__(self, reader: Reader) -> bytearray:
+    def __processor__(self, reader: Reader) -> int:
         return reader.primitive.i16.unpack(reader.read_bytes(2))[0]
 
 
 @datakind
 class U32:
-    def __processor__(self, reader: Reader) -> bytearray:
+    def __processor__(self, reader: Reader) -> int:
         return reader.primitive.u32.unpack(reader.read_bytes(4))[0]
 
 
 @datakind
 class I32:
-    def __processor__(self, reader: Reader) -> bytearray:
+    def __processor__(self, reader: Reader) -> int:
         return reader.primitive.i32.unpack(reader.read_bytes(4))[0]
 
 
 @datakind
 class U64:
-    def __processor__(self, reader: Reader) -> bytearray:
+    def __processor__(self, reader: Reader) -> int:
         return reader.primitive.u64.unpack(reader.read_bytes(8))[0]
 
 
 @datakind
 class I64:
-    def __processor__(self, reader: Reader) -> bytearray:
+    def __processor__(self, reader: Reader) -> int:
         return reader.primitive.i64.unpack(reader.read_bytes(8))[0]
 
 
 @datakind
+class F32:
+    def __processor__(self, reader: Reader) -> float:
+        return reader.primitive.f32.unpack(reader.read_bytes(4))[0]
+
+
+@datakind
+class F64:
+    def __processor__(self, reader: Reader) -> float:
+        return reader.primitive.f64.unpack(reader.read_bytes(8))[0]
+
+
+@datakind
 class String:
-    def read_to_zero(self, reader: Reader, params: Tuple) -> bytearray:
+    def read_to_zero(self, reader: Reader) -> bytearray:
         data = bytearray()
         while (byte := reader.read_bytes(1)) != b"\x00":
             data += byte
@@ -97,14 +105,18 @@ class String:
 
 @datakind
 class Array:
-    def __processor__(self, reader: Reader, params: Tuple[int]) -> str:
+    def __processor__(
+        self, reader: Reader, params: Tuple[int]
+    ) -> List[int]:
         (size,) = params
         return list(reader.read_bytes(size))
 
 
 @datakind
 class Contents:
-    def __processor__(self, reader: Reader, params: Tuple[bytes]) -> str:
+    def __processor__(
+        self, reader: Reader, params: Tuple[bytes]
+    ) -> bytes:
         (expected,) = params
         found = reader.read_bytes(len(expected))
 
